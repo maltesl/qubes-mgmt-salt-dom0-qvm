@@ -38,6 +38,7 @@ from nulltype import Null
 
 import qubesadmin
 import qubesadmin.devices
+import qubesadmin.toolparsers
 
 # Enable logging
 log = logging.getLogger(__name__)
@@ -563,37 +564,22 @@ def clone(vmname, clone, *varargs, **kwargs):
           - force-root
           - quiet
     '''
-    qvm = _QVMBase('qvm.clone', **kwargs)
+    parent_argparser = qubesadmin.toolparsers.get_parser_for_command('qvm-clone')
+    qvm = _QVMBase('qvm.clone', argparser_parents=[parent_argparser], **kwargs)
     qvm.parser.add_argument(
         '--shutdown',
         action='store_true',
         help='Will shutdown a running or paused VM to allow cloning'
     )
-    qvm.parser.add_argument('--quiet', action='store_true', help='Quiet')
-    qvm.parser.add_argument(
-        '--force-root',
-        action='store_true',
-        help='Force to run, even with root privileges'
-    )
-    qvm.parser.add_argument(
-        '--path',
-        nargs=1,
-        help='Specify path to the template directory'
-    )
-    qvm.parser.add_argument(
-        'vmname',
-        action=_VMAction,
-        help='Source VM name to clone'
-    )
-    qvm.parser.add_argument('clone', help='New clone VM name')
-    args = qvm.parse_args(vmname, clone, *varargs, **kwargs)
+    args = qvm.parse_args(vmname, clone, *varargs, groups=qvm.argparser._action_groups, **kwargs)
+    qvm.args.vm = vmname
 
     # Remove 'shutdown' flag from argv as its not a valid qvm.clone option
     if '--shutdown' in args._argv:  # pylint: disable=W0212
         args._argv.remove('--shutdown')  # pylint: disable=W0212
 
     # Check if 'clone' VM exists; fail if it does and return
-    clone_check_status = qvm.save_status(check(args.clone, *['missing']))
+    clone_check_status = qvm.save_status(check(args.new_name, *['missing']))
     if clone_check_status.failed():
         return qvm.status()
 
@@ -618,7 +604,7 @@ def clone(vmname, clone, *varargs, **kwargs):
         return qvm.status()
 
     # Confirm VM has been cloned
-    qvm.save_status(check(args.clone, *['exists']))
+    qvm.save_status(check(args.new_name, *['exists']))
 
     # Returns the status 'data' dictionary
     return qvm.status()
