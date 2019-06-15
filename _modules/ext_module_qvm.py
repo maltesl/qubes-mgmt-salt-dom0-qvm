@@ -588,7 +588,7 @@ def clone(vmname, clone, *varargs, **kwargs):
             # 'shutdown' VM ('force' mode will kill on failed shutdown)
             shutdown_status = qvm.save_status(
                 shutdown(
-                    args.vmname, **{'flags': ['wait', 'force']}
+                    vmname, **{'flags': ['wait', 'force']}
                 )
             )
             if shutdown_status.failed():
